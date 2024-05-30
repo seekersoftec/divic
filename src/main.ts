@@ -29,5 +29,3 @@ async function bootstrap(configService: ConfigService) {
 }
 
 bootstrap(new ConfigService());
-
-// https://gemini.google.com/app/46e38a303f222efb
