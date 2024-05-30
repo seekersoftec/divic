@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { AllExceptionsFilter } from './filters/http-exception.filter';
 // import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap(configService: ConfigService) {
@@ -18,6 +19,7 @@ async function bootstrap(configService: ConfigService) {
 
   app.enableCors();
   // app.setGlobalPrefix('api/v1');
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   const port = configService.get('PORT');
 
