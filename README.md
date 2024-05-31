@@ -46,6 +46,8 @@ $ npx prisma init
 
 $ npx prisma migrate dev --name init
 
+$ npx prisma generate
+
 $ npx prisma db seed
 ```
 
@@ -62,7 +64,6 @@ $ npm install
 <!--
 npx prisma migrate dev --name add-roles-to-user
 npx prisma generate
-
  -->
 
 ## Running the app
@@ -91,9 +92,9 @@ $ npm run test:e2e
 $ npm run test:cov
 ```
 
-## Postman Collection
+## Documentation
 
-https://bold-crescent-718127.postman.co/workspace/Team-Workspace~0285bb6d-1818-42ee-8a07-d757caab3c65/collection/35400228-86bb4255-a85c-4fe7-b1a0-aa12d890a1ad?action=share&creator=35400228
+- [Documentation](https://documenter.getpostman.com/view/35400228/2sA3Qwaoyh)
 
 ## Support
 
