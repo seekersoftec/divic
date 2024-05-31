@@ -7,7 +7,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-  const roundsOfHashing = 8;
+  const roundsOfHashing = 10;
 
   const user1 = await prisma.user.upsert({
     where: { email: 'testuser1@example.com' },
