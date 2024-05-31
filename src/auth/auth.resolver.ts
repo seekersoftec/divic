@@ -15,9 +15,9 @@ export class AuthResolver {
   async register(
     @Args('authRegisterInput') authRegisterInput: AuthRegisterInput,
   ): Promise<AuthResponse> {
-    const { user, accessToken, refreshToken } =
+    const { user, accessToken, refreshToken, challenge } =
       await this.authService.register(authRegisterInput);
-    return { user, accessToken, refreshToken };
+    return { user, accessToken, refreshToken, challenge };
   }
 
   @Mutation(() => AuthResponse)

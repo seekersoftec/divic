@@ -49,7 +49,7 @@ export class AuthService {
     try {
       return await bcrypt.compare(password, hashedPassword);
     } catch (error) {
-      this.logger.error('Error comparing passwords', error.stack);
+      this.logger.error('Error comparing passwords', error);
       throw new InternalServerErrorException('Error comparing passwords');
     }
   }
@@ -92,9 +92,9 @@ export class AuthService {
       }
 
       const tokens = await this.generateToken(user);
-      return { user, challenge: session.challenge, ...tokens };
+      return { user, challenge: session?.challenge ?? '', ...tokens };
     } catch (error) {
-      this.logger.error('Error registering user', error.stack);
+      this.logger.error('Error registering user', error);
       throw error;
     }
   }
@@ -115,9 +115,9 @@ export class AuthService {
         throw new UnauthorizedException('Invalid credentials');
       }
       const tokens = await this.generateToken(user);
-      return { user, ...tokens };
+      return { user, challenge: '', ...tokens };
     } catch (error) {
-      this.logger.error('Error logging in with password', error.stack);
+      this.logger.error('Error logging in with password', error);
       throw error;
     }
   }
@@ -133,7 +133,7 @@ export class AuthService {
     email: string,
     challenge: string,
     signedChallenge: string,
-  ): Promise<{ user: User; accessToken: string; refreshToken: string }> {
+  ): Promise<AuthResponse> {
     try {
       const user = await this.userService.findByEmail(email);
       if (
@@ -144,9 +144,9 @@ export class AuthService {
       }
 
       const tokens = await this.generateToken(user);
-      return { user, ...tokens };
+      return { user, challenge: '', ...tokens };
     } catch (error) {
-      this.logger.error('Error logging in with biometric key', error.stack);
+      this.logger.error('Error logging in with biometric key', error);
       throw error;
     }
   }
@@ -206,7 +206,7 @@ export class AuthService {
 
       return session;
     } catch (error) {
-      this.logger.error('Error registering with biometrics', error.stack);
+      this.logger.error('Error registering with biometrics', error);
       throw error;
     }
   }
@@ -253,10 +253,7 @@ export class AuthService {
 
       return true;
     } catch (error) {
-      this.logger.error(
-        'Error completing biometrics registration',
-        error.stack,
-      );
+      this.logger.error('Error completing biometrics registration', error);
       throw error;
     }
   }

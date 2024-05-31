@@ -13,5 +13,5 @@ export class AuthResponse {
   refreshToken: string;
 
   @Field()
-  challenge?: string;
+  challenge: string;
 }
