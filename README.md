@@ -31,6 +31,23 @@
 - Node.js
 - Docker
 - Docker Compose
+- Postman
+
+## Setup Docker Containers (Database included)
+
+```bash
+$ docker compose up -d
+```
+
+## Setup Prisma
+
+```bash
+$ npx prisma init
+
+$ npx prisma migrate dev --name init
+
+$ npx prisma db seed
+```
 
 ## Installation
 
@@ -73,6 +90,10 @@ $ npm run test:e2e
 # test coverage
 $ npm run test:cov
 ```
+
+## Postman Collection
+
+https://bold-crescent-718127.postman.co/workspace/Team-Workspace~0285bb6d-1818-42ee-8a07-d757caab3c65/collection/35400228-86bb4255-a85c-4fe7-b1a0-aa12d890a1ad?action=share&creator=35400228
 
 ## Support
 

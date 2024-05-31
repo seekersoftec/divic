@@ -38,17 +38,17 @@ export class UsersService {
    */
   async create(data: CreateUserInput): Promise<User> {
     try {
+      if (!validator.isLength(data.password, { min: 8 })) {
+        throw new BadRequestException(
+          'Password must be at least 8 characters long',
+        );
+      }
+
       const existingUser = await this.database.user.findUnique({
         where: { email: data.email },
       });
       if (existingUser) {
         throw new ConflictException('A user with this email already exists');
-      }
-
-      if (!validator.isLength(data.password, { min: 8 })) {
-        throw new BadRequestException(
-          'Password must be at least 8 characters long',
-        );
       }
 
       data.password = await this.hashPassword(data.password);
