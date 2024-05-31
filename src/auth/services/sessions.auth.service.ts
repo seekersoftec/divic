@@ -6,7 +6,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Session } from '../models/sessions.model';
+import { Session } from '../models/sessions.auth.model';
 
 @Injectable()
 export class SessionsService {

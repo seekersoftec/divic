@@ -13,14 +13,14 @@ import { User } from '@/users/users.model';
 import { AuthRegisterInput } from '../dto/auth-request';
 import { Role } from '../enum/role.enum';
 import { AuthResponse } from '../dto/auth-response';
-import { SessionsService } from './sessions.service';
+import { SessionsService } from './sessions.auth.service';
 import {
   generateChallenge,
   getDelayedDate,
   isHex,
   verifySignature,
 } from '@/utils/utils';
-import { Session } from '../models/sessions.model';
+import { Session } from '../models/sessions.auth.model';
 
 /**
  * AuthService is responsible for user authentication, including registration,
