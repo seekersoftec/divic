@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { BiometricAuthService } from './services/biometric-auth.service';
+import { AuthService } from './services/auth.service';
 import { AuthResolver } from './auth.resolver';
 import { UsersService } from '@/users/users.service';
 import { DatabaseService } from '@/database/database.service';
@@ -8,6 +7,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './jwt/jwt.strategy';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { SessionsService } from './services/sessions.service';
 
 @Module({
   imports: [
@@ -26,10 +26,10 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
   ],
   providers: [
     AuthService,
-    BiometricAuthService,
     AuthResolver,
     UsersService,
     DatabaseService,
+    SessionsService,
     JwtStrategy,
   ],
 })

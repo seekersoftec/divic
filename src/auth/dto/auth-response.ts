@@ -11,4 +11,7 @@ export class AuthResponse {
 
   @Field()
   refreshToken: string;
+
+  @Field()
+  challenge?: string;
 }

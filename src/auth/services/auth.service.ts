@@ -10,14 +10,17 @@ import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '@/users/users.service';
 import { User } from '@/users/users.model';
-import { AuthWithPasswordInput } from './dto/auth-request';
-import { Role } from './enum/role.enum';
-import { BiometricAuthService } from './services/biometric-auth.service';
+import { AuthRegisterInput } from '../dto/auth-request';
+import { Role } from '../enum/role.enum';
+import { AuthResponse } from '../dto/auth-response';
+import { SessionsService } from './sessions.service';
 import {
-  CredentialCreationOptionsJSON,
-  CredentialRequestOptionsJSON,
-} from '@github/webauthn-json';
-import { AuthResponse } from './dto/auth-response';
+  generateChallenge,
+  getDelayedDate,
+  isHex,
+  verifySignature,
+} from '@/utils/utils';
+import { Session } from '../models/sessions.model';
 
 /**
  * AuthService is responsible for user authentication, including registration,
@@ -30,7 +33,7 @@ export class AuthService {
   constructor(
     private readonly userService: UsersService,
     private readonly jwtService: JwtService,
-    private readonly biometricAuthService: BiometricAuthService,
+    private readonly sessionsService: SessionsService,
   ) {}
 
   /**
@@ -73,16 +76,23 @@ export class AuthService {
    * @param userInput - The user input containing email and password.
    * @returns An object containing the registered user and tokens.
    */
-  async register(userInput: AuthWithPasswordInput): Promise<AuthResponse> {
-    const { email, password } = userInput;
+  async register(userInput: AuthRegisterInput): Promise<AuthResponse> {
+    const { email, password, withBiometric } = userInput;
+    let session: Session;
+
     try {
       const user = await this.userService.create({
         email,
         password,
         role: Role.USER,
       });
+
+      if (withBiometric) {
+        session = await this.initiateBiometricAuth(user.email);
+      }
+
       const tokens = await this.generateToken(user);
-      return { user, ...tokens };
+      return { user, challenge: session.challenge, ...tokens };
     } catch (error) {
       this.logger.error('Error registering user', error.stack);
       throw error;
@@ -115,16 +125,21 @@ export class AuthService {
   /**
    * Authenticates a user using biometric key.
    * @param email - The user's email.
-   * @param biometricKey - The user's biometric key.
+   * @param challenge - The challenge.
+   * @param signedChallenge - The user's signed challenge.
    * @returns An object containing the access token.
    */
   async biometricLogin(
     email: string,
-    biometricKey: string,
+    challenge: string,
+    signedChallenge: string,
   ): Promise<{ user: User; accessToken: string; refreshToken: string }> {
     try {
       const user = await this.userService.findByEmail(email);
-      if (!user || !this.verifyBiometricKey(user.biometricKey, biometricKey)) {
+      if (
+        !user ||
+        !this.verifyBiometricKey(user.biometricKey, challenge, signedChallenge)
+      ) {
         throw new UnauthorizedException('Invalid biometric key');
       }
 
@@ -137,13 +152,41 @@ export class AuthService {
   }
 
   /**
-   * Initiates the biometric registration process.
-   * @param email - The email of the user.
-   * @returns The credential creation options JSON.
+   * Verifies the provided biometric key.
+   * @param biometricKey - The biometric key.
+   * @param challenge - The provided challenge.
+   * @param signedChallenge - The signed challenge.
+   * @returns True if the biometric key is valid, false otherwise.
    */
-  async initiateBiometricRegistration(
-    email: string,
-  ): Promise<CredentialCreationOptionsJSON> {
+  async verifyBiometricKey(
+    biometricKey: string,
+    challenge: string,
+    signedChallenge: string,
+  ): Promise<boolean> {
+    // Simulate biometric key verification logic
+
+    try {
+      if (biometricKey.length === 0) {
+        throw new BadRequestException('Empty biometric key');
+      }
+
+      if (!isHex(biometricKey)) {
+        throw new BadRequestException('Invalid biometric key format');
+      }
+
+      return verifySignature(signedChallenge, challenge, biometricKey);
+    } catch (error) {
+      this.logger.error(`Error verifying biometric key: ${error}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Initiates the biometric auth process.
+   * @param email - The email of the user.
+   * @returns Session.
+   */
+  async initiateBiometricAuth(email: string): Promise<Session> {
     try {
       if (!email) {
         throw new BadRequestException('Email is required');
@@ -154,7 +197,14 @@ export class AuthService {
         throw new NotFoundException('User not found');
       }
 
-      return this.biometricAuthService.initiateRegistration(user);
+      const challenge = generateChallenge();
+      const session = await this.sessionsService.create(
+        user.id,
+        challenge,
+        getDelayedDate(5),
+      );
+
+      return session;
     } catch (error) {
       this.logger.error('Error registering with biometrics', error.stack);
       throw error;
@@ -162,48 +212,53 @@ export class AuthService {
   }
 
   /**
-   * Initiates the biometric login process.
-   * @param email - The email of the user (optional).
-   * @returns The credential request options JSON.
-   */
-  async initiateBiometricLogin(
-    email?: string,
-  ): Promise<CredentialRequestOptionsJSON> {
-    return this.biometricAuthService.initiateLogin(email);
-  }
-
-  /**
    * Completes the biometric registration process.
+   * @param userId - The user ID.
    * @param challenge - The challenge used during registration.
-   * @param type - The type of the key.
-   * @param keyId - The key ID.
+   * @param signedChallenge - The challenge signed by the user.
+   * @param biometricKey - The biometric key.
    * @returns True if registration is successful.
    */
   async completeBiometricRegistration(
-    challenge: string,
-    type: string,
-    keyId: string,
-  ): Promise<boolean> {
-    return this.biometricAuthService.completeRegistration(
-      challenge,
-      type,
-      keyId,
-    );
-  }
-
-  /**
-   * Completes the biometric login process.
-   * @param challenge - The challenge used during login.
-   * @param keyId - The key ID.
-   * @param userId - The user ID.
-   * @returns The login response containing the user ID.
-   */
-  async completeBiometricLogin(
-    challenge: string,
-    keyId: string,
     userId: string,
-  ): Promise<AuthResponse> {
-    return this.biometricAuthService.completeLogin(challenge, keyId, userId);
+    biometricKey: string,
+    signedChallenge: string,
+  ): Promise<boolean> {
+    try {
+      const session = await this.sessionsService.findByUserId(userId);
+      if (!session) {
+        throw new NotFoundException('Session not found');
+      }
+
+      if (Date.now() > session.expireAt.getTime()) {
+        throw new BadRequestException('Session has expired');
+      }
+
+      if (
+        !(await this.verifyBiometricKey(
+          biometricKey,
+          session.challenge,
+          signedChallenge,
+        ))
+      ) {
+        throw new BadRequestException('Invalid biometric key');
+      }
+
+      const user = await this.userService.update(userId, { biometricKey });
+      if (!user) {
+        return false;
+      }
+
+      await this.sessionsService.delete(user.id, session.challenge);
+
+      return true;
+    } catch (error) {
+      this.logger.error(
+        'Error completing biometrics registration',
+        error.stack,
+      );
+      throw error;
+    }
   }
 
   /**
@@ -216,6 +271,6 @@ export class AuthService {
     userId: string,
     challenge: string,
   ): Promise<boolean> {
-    return this.biometricAuthService.abortRegistration(userId, challenge);
+    return this.sessionsService.delete(userId, challenge);
   }
 }
