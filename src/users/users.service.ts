@@ -4,15 +4,17 @@ import {
   NotFoundException,
   ConflictException,
   InternalServerErrorException,
+  BadRequestException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { CreateUserInput } from './dto/create-user.input';
 import { UpdateUserInput } from './dto/update-user.input';
 import { DatabaseService } from '@/database/database.service';
 import { User } from './users.model';
+import validator from 'validator';
 
 /**
- * UsersService handles the business logic for user management,
+ * UsersService handles the logic for user management,
  * including creating, updating, finding, and deleting users.
  */
 @Injectable()
@@ -21,6 +23,10 @@ export class UsersService {
   private readonly roundsOfHashing = 10;
 
   constructor(private readonly database: DatabaseService) {}
+
+  private async hashPassword(password: string): Promise<string> {
+    return bcrypt.hash(password, this.roundsOfHashing);
+  }
 
   /**
    * Creates a new user with the given data.
@@ -39,15 +45,28 @@ export class UsersService {
         throw new ConflictException('A user with this email already exists');
       }
 
-      data.password = await bcrypt.hash(data.password, this.roundsOfHashing);
+      if (!validator.isLength(data.password, { min: 8 })) {
+        throw new BadRequestException(
+          'Password must be at least 8 characters long',
+        );
+      }
+
+      data.password = await this.hashPassword(data.password);
       const user = await this.database.user.create({ data });
       delete user.password;
       return user;
     } catch (error) {
-      this.logger.error('Error creating user:', error);
-      throw new InternalServerErrorException(
-        'Failed to create user, please try again later',
-      );
+      this.logger.error(`Error creating user: ${error}`);
+      if (
+        error instanceof ConflictException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      } else {
+        throw new InternalServerErrorException(
+          'Failed to create user, please try again later',
+        );
+      }
     }
   }
 
@@ -66,7 +85,7 @@ export class UsersService {
    * @throws NotFoundException if the user is not found.
    * @throws InternalServerErrorException for any other errors.
    */
-  async findOne(id: string): Promise<User> {
+  async findByID(id: string): Promise<User> {
     try {
       const user = await this.database.user.findUnique({ where: { id } });
       if (!user) {
@@ -74,10 +93,14 @@ export class UsersService {
       }
       return user;
     } catch (error) {
-      this.logger.error('Error finding user by ID:', error);
-      throw new InternalServerErrorException(
-        'Failed to retrieve user, please try again later',
-      );
+      this.logger.error(`Error finding user by ID: ${error}`);
+      if (error instanceof NotFoundException) {
+        throw error;
+      } else {
+        throw new InternalServerErrorException(
+          'Failed to retrieve user, please try again later',
+        );
+      }
     }
   }
 
@@ -87,7 +110,7 @@ export class UsersService {
    * @returns The user with the specified email.
    * @throws NotFoundException if the user is not found.
    */
-  async findByEmail(email: string): Promise<User> {
+  async findByEmail(email: string): Promise<User | null> {
     const user = await this.database.user.findUnique({ where: { email } });
     if (!user) {
       throw new NotFoundException('User not found');
@@ -114,10 +137,14 @@ export class UsersService {
       }
       return user;
     } catch (error) {
-      this.logger.error('Error updating user:', error);
-      throw new InternalServerErrorException(
-        'Failed to update user, please try again later',
-      );
+      this.logger.error(`Error updating user: ${error}`);
+      if (error instanceof NotFoundException) {
+        throw error;
+      } else {
+        throw new InternalServerErrorException(
+          'Failed to update user, please try again later',
+        );
+      }
     }
   }
 
@@ -130,16 +157,20 @@ export class UsersService {
    */
   async remove(id: string): Promise<User> {
     try {
-      const user = await this.database.user.delete({ where: { id } });
+      const user = await this.database.user.findUnique({ where: { id } });
       if (!user) {
         throw new NotFoundException('User not found');
       }
-      return user;
+      return await this.database.user.delete({ where: { id } });
     } catch (error) {
-      this.logger.error('Error deleting user:', error);
-      throw new InternalServerErrorException(
-        'Failed to delete user, please try again later',
-      );
+      this.logger.error(`Error deleting user: ${error}`);
+      if (error instanceof NotFoundException) {
+        throw error;
+      } else {
+        throw new InternalServerErrorException(
+          'Failed to delete user, please try again later',
+        );
+      }
     }
   }
 }
