@@ -25,18 +25,18 @@ services:
     networks:
       - backend
 
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    env_file:
-      - .env.docker
-    ports:
-      - "3000:3000"
-    depends_on:
-      - db
-    networks:
-      - backend
+  # app:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   env_file:
+  #     - .env.docker
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - db
+  #   networks:
+  #     - backend
 
 volumes:
   postgres_data: 
