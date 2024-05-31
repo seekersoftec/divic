@@ -42,6 +42,12 @@ $ npm install
 <!-- npx prisma generate -->
 <!-- npx prisma db seed -->
 
+<!--
+npx prisma migrate dev --name add-roles-to-user
+npx prisma generate
+
+ -->
+
 ## Running the app
 
 ```bash
