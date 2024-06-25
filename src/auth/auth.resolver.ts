@@ -22,12 +22,12 @@ export class AuthResolver {
 
   @Mutation(() => AuthResponse)
   async registerBiometrics(
-    @Args('userId') userId: string,
+    @Args('email') email: string,
     @Args('biometricKey') biometricKey: string,
     @Args('signedChallenge') signedChallenge: string,
   ): Promise<{ message: boolean }> {
     const isComplete = await this.authService.completeBiometricRegistration(
-      userId,
+      email,
       biometricKey,
       signedChallenge,
     );

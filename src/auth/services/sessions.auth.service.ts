@@ -23,7 +23,7 @@ export class SessionsService {
       where: { userId },
     });
 
-    if (existingUser) {
+    if (existingUser && Date.now() < existingUser.expireAt.getTime()) {
       throw new UnauthorizedException(
         'User already has a pending registration',
       );

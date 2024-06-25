@@ -25,7 +25,7 @@ export function verifySignature(
  * @returns The generated challenge string.
  */
 export const generateChallenge = (): string => {
-  return randomBytes(32).toString('utf8'); // base64url
+  return randomBytes(32).toString('base64url'); // base64url | utf8
 };
 
 /**

@@ -197,8 +197,17 @@ export class AuthService {
         throw new NotFoundException('User not found');
       }
 
+      let session = await this.sessionsService.findByUserId(user.id);
+      if (!session) {
+        throw new NotFoundException('Session not found');
+      }
+
+      if (Date.now() < session.expireAt.getTime()) {
+        throw new BadRequestException('Session has not expired');
+      }
+
       const challenge = generateChallenge();
-      const session = await this.sessionsService.create(
+      session = await this.sessionsService.create(
         user.id,
         challenge,
         getDelayedDate(5),
@@ -213,19 +222,24 @@ export class AuthService {
 
   /**
    * Completes the biometric registration process.
-   * @param userId - The user ID.
+   * @param email - The user ID(in this case email).
    * @param challenge - The challenge used during registration.
    * @param signedChallenge - The challenge signed by the user.
    * @param biometricKey - The biometric key.
    * @returns True if registration is successful.
    */
   async completeBiometricRegistration(
-    userId: string,
+    email: string,
     biometricKey: string,
     signedChallenge: string,
   ): Promise<boolean> {
     try {
-      const session = await this.sessionsService.findByUserId(userId);
+      let user = await this.userService.findByEmail(email);
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      const session = await this.sessionsService.findByUserId(user.id);
       if (!session) {
         throw new NotFoundException('Session not found');
       }
@@ -244,7 +258,7 @@ export class AuthService {
         throw new BadRequestException('Invalid biometric key');
       }
 
-      const user = await this.userService.update(userId, { biometricKey });
+      user = await this.userService.update(user.id, { biometricKey });
       if (!user) {
         return false;
       }
